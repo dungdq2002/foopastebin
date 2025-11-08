@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# take the first argument as source file, then compile using g++ and run
+
+g++ -Wall -Wextra -Wconversion -Wno-unused-result -static -O2 -std=c++20 $1.cpp -o $1 && ./$1
