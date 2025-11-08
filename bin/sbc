@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+# Convert between bases (2/bin, 8/oct, 10/dec, 16/hex)
+# Usage: ./convert_base.sh [-f <from_base>] [-t <to_base>] [-q] <number...>
+# Defaults: from=10, to=2
+
+from="10"
+to="2"
+quiet=false
+
+# --- Parse flags ---
+while getopts "f:t:q" opt; do
+  case $opt in
+    f) from=$OPTARG ;;
+    t) to=$OPTARG ;;
+    q) quiet=true ;;
+    *)
+      echo "Usage: $0 [-f <from_base>] [-t <to_base>] [-q] <number...>"
+      echo "Supported bases: 2/bin, 8/oct, 10/dec, 16/hex"
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 [-f <from_base>] [-t <to_base>] [-q] <number...>"
+  echo "Supported bases: 2/bin, 8/oct, 10/dec, 16/hex"
+  exit 1
+fi
+
+# --- Normalize base names ---
+normalize_base() {
+  local base=$1
+  case "$base" in
+    2|bin) echo 2 ;;
+    8|oct) echo 8 ;;
+    10|dec) echo 10 ;;
+    16|hex) echo 16 ;;
+    *)
+      echo "Error: Unsupported base '$base'" >&2
+      exit 1
+      ;;
+  esac
+}
+
+from=$(normalize_base "$from")
+to=$(normalize_base "$to")
+
+# --- Convert one number ---
+convert() {
+  local num=$1 dec result
+
+  # Convert input → decimal
+  dec=$(( $from#$num )) 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "Error: '$num' is not valid for base $from" >&2
+    return
+  fi
+
+  # Convert decimal → target base
+  case "$to" in
+    2)  result=$(echo "obase=2; $dec" | bc) ;;
+    8)  result=$(echo "obase=8; $dec" | bc) ;;
+    10) result=$dec ;;
+    16) result=$(echo "obase=16; $dec" | bc | tr '[:upper:]' '[:lower:]') ;;
+  esac
+
+  if [ "$quiet" = true ]; then
+    echo "$result"
+  else
+    echo "$num (base $from) = $result (base $to)"
+  fi
+}
+
+# --- Process all numbers ---
+for num in "$@"; do
+  convert "$num"
+done
+
